@@ -1,126 +1,119 @@
-import React, { useState, useEffect, useReducer } from 'react';
+import React, { useState, useReducer } from 'react';
+import validator from 'validator'; 
 
 import Card from '../UI/Card/Card';
 import classes from './Login.module.css';
 import Button from '../UI/Button/Button';
+import OTP from './Otp';
 
-
-const emailReducer = (state, action) => {
-  if (action.type === 'EMAIL_CHANGE') {
+const phoneReducer = (state, action) => {
+  if (action.type === 'PHONE_CHANGE') {
     return {
       ...state,
-      value: action.email,
-      isValid: action.email.includes('@')
+      value: action.phone,
+      isValid: validator.isMobilePhone(action.phone, 'en-IN'),
     };
   }
-  if (action.type === 'INPUT_BLUR') { 
-    return {
-      ...state,
-      value: state.value,
-      isValid: state.value.includes('@'),
-    };
-  }
-  
-  return {
-    value: '',
-    isValid: false
-  }
-}
-
-const passwordReducer = (state, action) => { 
-
-  if (action.type === 'PASSWORD_CHANGE') { 
-    return {
-      ...state,
-      value: action.password,
-      isValid: action.password.trim().length > 6
-    };
-  } 
   if (action.type === 'INPUT_BLUR') {
     return {
       ...state,
-    }
-   }
+      value: state.value,
+      isValid: validator.isMobilePhone(state.value, 'en-IN'),
+    };
+  }
 
   return {
     value: '',
-    isValid: false
-  }
-}
+    isValid: false,
+  };
+};
+
+// const otpReducer = (state, action) => {
+//   if (action.type === 'OTP_CHANGE') {
+//     return {
+//       ...state,
+//       value: action.otp,
+//       isValid: action.otp.trim().length > 6,
+//     };
+//   }
+//   if (action.type === 'INPUT_BLUR') {
+//     return {
+//       ...state,
+//     };
+//   }
+
+//   return {
+//     value: '',
+//     isValid: false,
+//   };
+// };
 
 const Login = (props) => {
-  const [formIsValid, setFormIsValid] = useState(false);
+  const [formSubmitted, setFormSubmit] = useState(false);
+  const [isOtpValid, setOtpIsValid] = useState(null);
+  const [phoneState, dispatchPhone] = useReducer(phoneReducer, {
+    value: '',
+    isValid: null,
+  });
 
-  const [emailState, dispatchEmail] = useReducer(emailReducer, { value: '', isValid: null });
-  const [passwordState, dispatchPassword] = useReducer(passwordReducer, { value: '', isValid: null });
 
-  const emailChangeHandler = (event) => {
-    dispatchEmail({type: 'EMAIL_CHANGE', email: event.target.value});
+  const phoneChangeHandler = (event) => {
+    dispatchPhone({ type: 'PHONE_CHANGE', phone: event.target.value });
   };
 
-  const { isValid: emailIsValid } = emailState;
-  const { isValid: passwordIsValid } = passwordState;
-
-  useEffect(() => {
-    setFormIsValid(
-      emailIsValid && passwordIsValid
-    );
-   },[emailIsValid, passwordIsValid]);
-
-  const passwordChangeHandler = (event) => {
-    dispatchPassword({type: 'PASSWORD_CHANGE', password: event.target.value});
+  const { isValid: phoneIsValid } = phoneState;
+ 
+  const validatePhoneHandler = () => {
+    dispatchPhone({ type: 'INPUT_BLUR' });
   };
 
-  const validateEmailHandler = () => {
-    dispatchEmail({type: 'INPUT_BLUR'});
-  };
-
-  const validatePasswordHandler = () => {
-    dispatchPassword({type: 'INPUT_BLUR'});
-  };
-
-  const submitHandler = (event) => {
+  const submitPhoneHandler = (event) => {
     event.preventDefault();
-    props.onLogin(emailState.value, passwordState.value);
+    setFormSubmit(true);
+    // props.onLogin(phoneState.value, otpState.value);
   };
+
+  const submitOtpHandler = (otp) => {
+    console.log(otp, 'chh');
+    if (otp === '1111') {
+      setOtpIsValid(true);
+      props.onLogin(phoneState.value, otp);     
+    } else {
+      setOtpIsValid(false);
+    }
+  }
 
   return (
     <Card className={classes.login}>
-      <form onSubmit={submitHandler}>
-        <div
-          className={`${classes.control} ${
-            emailIsValid === false ? classes.invalid : ''
-          }`}
-        >
-          <label htmlFor="email">E-Mail</label>
-          <input
-            type="email"
-            id="email"
-            value={emailState.value}
-            onChange={emailChangeHandler}
-            onBlur={validateEmailHandler}
-          />
-        </div>
-        <div
-          className={`${classes.control} ${
-            !passwordState.isValid && passwordState.isValid !==null ? classes.invalid : ''
-          }`}
-        >
-          <label htmlFor="password">Password</label>
-          <input
-            type="password"
-            id="password"
-            value={passwordState.value}
-            onChange={passwordChangeHandler}
-            onBlur={validatePasswordHandler}
-          />
-        </div>
-        <div className={classes.actions}>
-          <Button type="submit" className={classes.btn} disabled={!formIsValid}>
-            Login
-          </Button>
-        </div>
-      </form>
+      {!formSubmitted && (
+        <form onSubmit={submitPhoneHandler}>
+          <div
+            className={`${classes.control} ${
+              phoneIsValid === false ? classes.invalid : ''
+            }`}
+          >
+            <label htmlFor='phone'>Phone Number</label>
+            <input
+              type='tel'
+              id='phone'
+              value={phoneState.value}
+              onChange={phoneChangeHandler}
+              onBlur={validatePhoneHandler}
+            />
+          </div>
+          <div className={classes.actions}>
+            <Button
+              type='submit'
+              className={classes.btn}
+              disabled={!phoneIsValid}
+            >
+              Send OTP
+            </Button>
+          </div>
+        </form>
+      )}
+      {formSubmitted && <OTP classes={classes} onOtpSubmit={submitOtpHandler} />}
+      {isOtpValid === false && <p>Please enter valid OTP</p>}
     </Card>
   );
 };
